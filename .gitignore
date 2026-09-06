@@ -1,0 +1,28 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# Data files (Credit card dataset is ~150MB, exceeding GitHub 100MB limit)
+data/*.csv
+data/*.parquet
+data/*.zip
+
+# Model artifacts (keep models/ folder tracked via .gitkeep)
+models/*.joblib
+models/*.json
+models/*.pkl
+models/*.bin
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

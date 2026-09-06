@@ -100,6 +100,48 @@ costguard/
 - Repo state exactly at the Sep 21, 11:45pm Taipei deadline is what gets judged — commits
   after that may be disregarded. Do not plan on post-deadline fixes.
 
+## Version Control
+- Make **10+ meaningful git commits** across the project, one per logical unit of work
+  (e.g. "add data_prep pipeline", "add cost optimizer", "add SHAP explainability",
+  "add Streamlit dashboard", "add tests", "add README"). Do not squash everything into
+  1-2 giant commits — judges and the "original work" requirement both benefit from a
+  visible, incremental commit history that shows the project was actually built during
+  the hackathon window, not dumped in at the last minute.
+- Write clear, specific commit messages (not "update" or "fix stuff").
+- Commit after each Definition-of-Done phase below, plus smaller commits within a phase
+  when it makes sense (e.g. commit the baseline model separately from the calibration step).
+
+## UI/Design Guidelines (for app/dashboard.py)
+The dashboard is the main visual artifact judges see — a generic/templated look hurts
+the Presentation score. Avoid these common AI-generated-UI tells:
+
+**Avoid:**
+- Harsh gradients; drop shadows everywhere; purple-and-black or neon color schemes;
+  rainbow coloring; liquid-glass effects
+- Emojis in headers/labels; sparkle icons; radial orbs; dot-grid backgrounds as decoration
+- 3 feature cards in a row / bento grids used decoratively rather than functionally
+- Fake testimonials or placeholder "customer" quotes (not applicable here, but don't add
+  fabricated praise text anywhere)
+- Terminal-window styling as a decorative gimmick unrelated to actual function
+- "It's not X, it's Y" copywriting patterns; em dashes used as a stylistic tic
+- Animated arrows, hover animations, or skeleton loaders added purely for flourish
+- Colored left stripes on cards as decoration
+- Generic checkmark bullet lists used to pad content
+- Basic pastel colors as a default choice without a reason
+
+**Do instead:**
+- Pick one deliberate, restrained color palette tied to the fraud/finance domain (e.g.
+  a single accent color for "flagged," neutral grays/whites otherwise) — soft corner
+  radius is fine, used consistently, not as a trend-chase.
+- Use Lucide icons only where they add real meaning (e.g. a flag icon on a flagged row),
+  not decoratively.
+- Let the charts (threshold vs. savings curve, SHAP plots) be the visual focus — the
+  UI chrome around them should be minimal and get out of the way.
+- No 3-tier pricing structure, no TOS/privacy-policy boilerplate — not relevant to a
+  research prototype dashboard, don't add them just because they "look complete."
+- If real-time-feeling updates matter (e.g. slider interaction), use Streamlit's native
+  reactivity rather than fake loading states or animated transitions bolted on top.
+
 ## Submission Requirements (Devpost — all 6 required)
 1. Project Description — what it does, problem solved, how it works under the hood.
 2. Source Code — public GitHub repo link with README (setup, prerequisites, usage).
