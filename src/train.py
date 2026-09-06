@@ -189,11 +189,17 @@ def train_and_evaluate_all() -> Dict[str, Any]:
     xgb_cal_results = evaluate_model_performance(calibrated_xgb, X_test, y_test, threshold=0.5)
 
     # Save test set and predictions for fast dashboard loading
+    # Include raw (unscaled) Amount for per-transaction cost optimization
+    from src.data_prep import load_raw_data, DEFAULT_DATA_PATH
+    raw_df = load_raw_data(DEFAULT_DATA_PATH)
+    raw_amounts = raw_df.loc[X_test.index, "Amount"].to_numpy()
+
     test_artifacts = {
         "X_test": X_test,
         "y_test": y_test,
         "lr_probs": lr_results["y_prob"],
         "xgb_cal_probs": xgb_cal_results["y_prob"],
+        "raw_amounts": raw_amounts,
     }
     save_artifact(test_artifacts, "test_eval_cache.joblib")
 

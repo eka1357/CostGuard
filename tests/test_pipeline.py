@@ -170,12 +170,14 @@ class TestCostOptimizer:
         # Model flags 1 legit as fraud (FP=1), correctly clears 4 (TN=4)
         y_true = np.array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
         y_prob = np.array([0.9, 0.8, 0.7, 0.6, 0.1, 0.8, 0.2, 0.2, 0.1, 0.1])
+        amounts = np.array([200, 50, 300, 100, 150, 80, 40, 60, 30, 20])
 
+        # --- Per-transaction Amount mode ---
         res = calculate_savings_and_metrics(
             y_true=y_true,
             y_prob=y_prob,
             threshold=0.5,
-            transaction_value=100.0,
+            amounts=amounts,
             investigation_cost=8.0,
             investigate_all_alerts=True,
         )
@@ -185,13 +187,26 @@ class TestCostOptimizer:
         assert res["false_negatives"] == 1
         assert res["total_alerts"] == 5
 
-        # Baseline loss = 5 * $100 = $500
-        # Model loss = 1 missed ($100) + 5 alerts investigated * $8 ($40) = $140
-        # Dollars saved = $500 - $140 = $360
-        # Formula check: 4 * 100 - (4 + 1) * 8 = 400 - 40 = $360
-        assert res["dollars_saved"] == 360.0
-        assert res["baseline_loss"] == 500.0
-        assert res["model_total_loss"] == 140.0
+        # Baseline loss = sum of all fraud amounts = 200+50+300+100+150 = $800
+        # Caught frauds (prob >= 0.5): indices 0,1,2,3 -> amounts 200,50,300,100 = $650
+        # Investigation expenses = 5 alerts * $8 = $40
+        # Dollars saved = $650 - $40 = $610
+        assert res["baseline_loss"] == 800.0
+        assert res["fraud_loss_prevented"] == 650.0
+        assert res["investigation_expenses"] == 40.0
+        assert res["dollars_saved"] == 610.0
+
+        # --- Flat mode (backward compat) ---
+        res_flat = calculate_savings_and_metrics(
+            y_true=y_true,
+            y_prob=y_prob,
+            threshold=0.5,
+            transaction_value=100.0,
+            investigation_cost=8.0,
+            investigate_all_alerts=True,
+        )
+        # Formula: 4 * 100 - (4 + 1) * 8 = 400 - 40 = $360
+        assert res_flat["dollars_saved"] == 360.0
 
     def test_sweep_thresholds_shape_and_bounds(self):
         y_true = np.random.choice([0, 1], size=200, p=[0.9, 0.1])

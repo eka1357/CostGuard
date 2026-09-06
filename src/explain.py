@@ -27,18 +27,19 @@ from src.train import load_artifact, save_artifact
 from src.cost_optimizer import optimize_thresholds, DEFAULT_TRANSACTION_VALUE, DEFAULT_INVESTIGATION_COST
 
 
-def load_model_and_test_data() -> Tuple[Any, pd.DataFrame, np.ndarray, np.ndarray]:
+def load_model_and_test_data() -> Tuple[Any, pd.DataFrame, np.ndarray, np.ndarray, np.ndarray]:
     """
     Load primary XGBoost model and cached test predictions.
     Returns:
-        (xgb_model, X_test, y_test, y_prob)
+        (xgb_model, X_test, y_test, y_prob, raw_amounts)
     """
     xgb_model = load_artifact("xgb_model.joblib")
     test_cache = load_artifact("test_eval_cache.joblib")
     X_test = test_cache["X_test"]
     y_test = test_cache["y_test"].to_numpy()
     y_prob = test_cache["xgb_cal_probs"]
-    return xgb_model, X_test, y_test, y_prob
+    raw_amounts = test_cache["raw_amounts"]
+    return xgb_model, X_test, y_test, y_prob, raw_amounts
 
 
 def get_top_flagged_transactions(
@@ -154,13 +155,13 @@ def explain_top_flagged(
     4. Computes TreeExplainer attributions.
     5. Saves explanation cache for dashboard use.
     """
-    xgb_model, X_test, y_test, y_prob = load_model_and_test_data()
+    xgb_model, X_test, y_test, y_prob, raw_amounts = load_model_and_test_data()
 
-    # Determine cost-optimal threshold
+    # Determine cost-optimal threshold using per-transaction amounts
     opt_summary = optimize_thresholds(
         y_true=y_test,
         y_prob=y_prob,
-        transaction_value=transaction_value,
+        amounts=raw_amounts,
         investigation_cost=investigation_cost,
     )
     cost_opt_threshold = opt_summary["cost_optimal"]["threshold"]

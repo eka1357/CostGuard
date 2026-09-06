@@ -81,14 +81,15 @@ def load_cached_data():
     y_test = test_cache["y_test"].to_numpy()
     y_prob = test_cache["xgb_cal_probs"]
     X_test = test_cache["X_test"]
+    raw_amounts = test_cache["raw_amounts"]
 
     shap_cache = load_artifact("shap_explanations.joblib")
-    return X_test, y_test, y_prob, shap_cache
+    return X_test, y_test, y_prob, raw_amounts, shap_cache
 
 
 # 1. Load Data
 try:
-    X_test, y_test, y_prob, shap_cache = load_cached_data()
+    X_test, y_test, y_prob, raw_amounts, shap_cache = load_cached_data()
 except Exception as e:
     st.error(
         f"Model artifacts not found. Please run the training pipeline first: `python src/train.py` ({e})"
@@ -99,16 +100,8 @@ except Exception as e:
 # 2. Sidebar Controls: Cost Matrix Parameters
 st.sidebar.markdown("### Operational Cost Parameters")
 st.sidebar.caption(
-    "Adjust cost assumptions to observe how optimal threshold and projected dollars saved shift live."
-)
-
-transaction_val = st.sidebar.slider(
-    "Average Fraud Loss ($)",
-    min_value=20.0,
-    max_value=500.0,
-    value=DEFAULT_TRANSACTION_VALUE,
-    step=10.0,
-    help="Financial loss prevented for each caught fraudulent transaction (True Positive).",
+    "Adjust investigation cost to observe how optimal threshold and projected dollars saved shift live. "
+    "Fraud loss values are per-transaction from the dataset's actual Amount column."
 )
 
 investigation_cost = st.sidebar.slider(
@@ -120,8 +113,7 @@ investigation_cost = st.sidebar.slider(
     help="Labor and verification expense incurred for each alert investigated.",
 )
 
-cost_ratio = investigation_cost / transaction_val
-st.sidebar.markdown(f"**Cost Ratio ($C_{{invest}} / V$):** `{cost_ratio:.4f}`")
+st.sidebar.markdown("**Transaction Values:** Per-transaction Amount from dataset")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### Decision Threshold Policy")
@@ -130,7 +122,7 @@ st.sidebar.markdown("### Decision Threshold Policy")
 opt_results = optimize_thresholds(
     y_true=y_test,
     y_prob=y_prob,
-    transaction_value=transaction_val,
+    amounts=raw_amounts,
     investigation_cost=investigation_cost,
     num_steps=500,
 )
@@ -170,7 +162,7 @@ current_metrics = calculate_savings_and_metrics(
     y_true=y_test,
     y_prob=y_prob,
     threshold=active_threshold,
-    transaction_value=transaction_val,
+    amounts=raw_amounts,
     investigation_cost=investigation_cost,
 )
 
@@ -398,10 +390,10 @@ st.markdown("---")
 st.markdown("#### Methodology & Cost Assumptions")
 st.markdown(
     f"""
-    - **Expected Savings Formulation**:
-      $$\\text{{Net Savings}} = (\\text{{True Positives}} \\times V) - ((\\text{{True Positives}} + \\text{{False Positives}}) \\times C_{{\\text{{invest}}}})$$
-      where $V = \\${transaction_val:,.2f}$ and $C_{{\\text{{invest}}}} = \\${investigation_cost:,.2f}$.
-    - **Theoretical Bayes Threshold**: $t^* = \\frac{{C_{{\\text{{invest}}}}}}{{V}} = {cost_ratio:.4f}$. In well-calibrated systems, transactions with $P(\\text{{Fraud}}) > t^*$ yield positive expected value when flagged.
+    - **Expected Savings Formulation (Per-Transaction)**:
+      $$\\text{{Net Savings}} = \\sum_{{\\text{{caught frauds}}}} \\text{{Amount}}_i - (\\text{{Total Alerts}} \\times C_{{\\text{{invest}}}})$$
+      where each fraud's loss is its actual transaction Amount, and $C_{{\\text{{invest}}}} = \\${investigation_cost:,.2f}$.
+    - **Baseline Fraud Loss** (no model): $\\${current_metrics['baseline_loss']:,.2f}$ across {int(current_metrics['true_positives'] + current_metrics['false_negatives'])} fraud transactions.
     - **Disclaimer**: *CostGuard is an experimental research prototype for GIBC V2 Track 02. Not a medical device, not a diagnostic tool, and not financial advice.*
     """
 )
