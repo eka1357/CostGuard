@@ -210,6 +210,51 @@ def train_and_evaluate_all() -> Dict[str, Any]:
     }
 
 
+def generate_calibration_plot(
+    y_test: pd.Series,
+    raw_probs: np.ndarray,
+    cal_probs: np.ndarray,
+    n_bins: int = 10,
+) -> Path:
+    """
+    Generate reliability diagram comparing raw vs. calibrated probability estimates.
+    Saves plot to models/calibration_curve.png.
+
+    A well-calibrated model should fall along the diagonal — predicted probability
+    should match observed fraud rate. This is critical for the cost framework because
+    the Bayes-optimal threshold derivation assumes calibrated probabilities.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    y_np = y_test.to_numpy() if hasattr(y_test, "to_numpy") else np.asarray(y_test)
+
+    raw_frac, raw_mean = calibration_curve(y_np, raw_probs, n_bins=n_bins, strategy="uniform")
+    cal_frac, cal_mean = calibration_curve(y_np, cal_probs, n_bins=n_bins, strategy="uniform")
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.plot([0, 1], [0, 1], "k--", linewidth=0.8, label="Perfectly Calibrated")
+    ax.plot(raw_mean, raw_frac, "s-", color="#d97706", markersize=5, linewidth=1.2,
+            label=f"XGBoost Raw (Brier={brier_score_loss(y_np, raw_probs):.4f})")
+    ax.plot(cal_mean, cal_frac, "o-", color="#059669", markersize=5, linewidth=1.2,
+            label=f"XGBoost Calibrated (Brier={brier_score_loss(y_np, cal_probs):.4f})")
+    ax.set_xlabel("Mean Predicted Probability")
+    ax.set_ylabel("Observed Fraud Fraction")
+    ax.set_title("Probability Calibration — Reliability Diagram")
+    ax.legend(loc="lower right", fontsize=8)
+    ax.set_xlim(-0.02, 1.02)
+    ax.set_ylim(-0.02, 1.02)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+
+    output_path = MODELS_DIR / "calibration_curve.png"
+    fig.savefig(output_path, dpi=150)
+    plt.close(fig)
+    print(f"Calibration curve saved to: {output_path}")
+    return output_path
+
+
 if __name__ == "__main__":
     print("=" * 70)
     print("CostGuard - Complete Model Training & Evaluation")
@@ -234,3 +279,11 @@ if __name__ == "__main__":
     print(f"{'False Positives':<20} | {lr['false_positives']:<15} | {xgb_raw['false_positives']:<15} | {xgb_cal['false_positives']:<15}")
     print(f"{'False Negatives':<20} | {lr['false_negatives']:<15} | {xgb_raw['false_negatives']:<15} | {xgb_cal['false_negatives']:<15}")
     print("=" * 70)
+
+    # Generate calibration reliability diagram
+    generate_calibration_plot(
+        y_test=load_artifact("test_eval_cache.joblib")["y_test"],
+        raw_probs=xgb_raw["y_prob"],
+        cal_probs=xgb_cal["y_prob"],
+    )
+
