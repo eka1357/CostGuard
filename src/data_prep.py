@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import RobustScaler
-from imblearn.over_sampling import SMOTE
+from imblearn.over_sampling import SMOTE  # noqa: F401 — available for experimentation
 
 # ==========================================
 # Configuration & Constants
@@ -107,19 +107,6 @@ def scale_features(
     return X_train_scaled, X_test_scaled, scaler
 
 
-def resample_smote(
-    X_train: pd.DataFrame,
-    y_train: pd.Series,
-    sampling_strategy: float = 0.1,
-    random_state: int = DEFAULT_RANDOM_STATE,
-) -> Tuple[pd.DataFrame, pd.Series]:
-    """
-    Synthesize minority fraud instances on training data using SMOTE.
-    Note: Should ONLY be applied to training data, never to test set.
-    """
-    smote = SMOTE(sampling_strategy=sampling_strategy, random_state=random_state)
-    X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
-    return pd.DataFrame(X_resampled, columns=X_train.columns), pd.Series(y_resampled, name=y_train.name)
 
 
 def compute_imbalance_ratio(y: pd.Series) -> float:
