@@ -385,7 +385,38 @@ else:
             "Red bars escalate fraud probability (positive SHAP contribution); Blue bars mitigate fraud probability."
         )
 
-# 7. Operational Methodology Footer
+# 7. Sensitivity Analysis: How do results change across cost assumptions?
+st.markdown("---")
+st.subheader("Sensitivity Analysis: Investigation Cost Impact")
+st.caption(
+    "How do the optimal threshold and projected savings change if the investigation cost assumption is wrong? "
+    "Each row uses the actual per-transaction Amount from the dataset."
+)
+
+sensitivity_costs = [2.0, 5.0, 8.0, 15.0, 25.0, 40.0]
+sensitivity_rows = []
+for c_inv in sensitivity_costs:
+    sens_result = optimize_thresholds(
+        y_true=y_test,
+        y_prob=y_prob,
+        amounts=raw_amounts,
+        investigation_cost=c_inv,
+        num_steps=500,
+    )
+    co = sens_result["cost_optimal"]
+    sensitivity_rows.append({
+        "Investigation Cost ($)": f"${c_inv:.0f}",
+        "Optimal Threshold": f"{co['threshold']:.3f}",
+        "Frauds Caught": int(co["true_positives"]),
+        "False Alarms": int(co["false_positives"]),
+        "Net Dollars Saved ($)": f"${co['dollars_saved']:,.2f}",
+        "vs. F1-Optimal": f"{sens_result['pct_gain_over_f1']:+.1f}%",
+    })
+
+sensitivity_df = pd.DataFrame(sensitivity_rows)
+st.dataframe(sensitivity_df, use_container_width=True, hide_index=True)
+
+# 8. Operational Methodology Footer
 st.markdown("---")
 st.markdown("#### Methodology & Cost Assumptions")
 st.markdown(
@@ -397,3 +428,4 @@ st.markdown(
     - **Disclaimer**: *CostGuard is an experimental research prototype for GIBC V2 Track 02. Not a medical device, not a diagnostic tool, and not financial advice.*
     """
 )
+
