@@ -210,31 +210,37 @@ fig.add_trace(
         y=sweep_df["dollars_saved"],
         mode="lines",
         name="Projected Net Savings ($)",
-        line=dict(color="#0284c7", width=2.5),
+        line=dict(color="#0284c7", width=3.0),
         hovertemplate="Threshold: %{x:.4f}<br>Net Savings: $%{y:,.2f}<extra></extra>",
     )
 )
 
-# Vertical line for Cost-Optimal Threshold
+# Vertical line for Cost-Optimal Threshold with high-contrast pill badge
 fig.add_vline(
     x=cost_opt_thresh,
     line_dash="dash",
     line_color="#059669",
-    line_width=1.8,
-    annotation_text=f"Cost-Optimal: {cost_opt_thresh:.3f} (${opt_results['cost_optimal']['dollars_saved']:,.0f})",
-    annotation_position="top right",
-    annotation_font=dict(size=11, color="#059669"),
+    line_width=2.0,
+    annotation_text=f"<b>Cost-Optimal: {cost_opt_thresh:.3f}</b><br>Savings: ${opt_results['cost_optimal']['dollars_saved']:,.0f}",
+    annotation_position="top right" if cost_opt_thresh <= 0.65 else "top left",
+    annotation_font=dict(size=12, color="#065f46"),
+    annotation_bgcolor="rgba(209, 250, 229, 0.95)",
+    annotation_bordercolor="#059669",
+    annotation_borderpad=5,
 )
 
-# Vertical line for F1-Optimal Threshold
+# Vertical line for F1-Optimal Threshold with high-contrast pill badge
 fig.add_vline(
     x=f1_opt_thresh,
     line_dash="dot",
     line_color="#d97706",
-    line_width=1.5,
-    annotation_text=f"F1-Optimal: {f1_opt_thresh:.3f} (${opt_results['f1_optimal']['dollars_saved']:,.0f})",
-    annotation_position="bottom right",
-    annotation_font=dict(size=11, color="#d97706"),
+    line_width=2.0,
+    annotation_text=f"<b>F1-Optimal: {f1_opt_thresh:.3f}</b><br>Savings: ${opt_results['f1_optimal']['dollars_saved']:,.0f}",
+    annotation_position="bottom right" if f1_opt_thresh <= 0.65 else "bottom left",
+    annotation_font=dict(size=12, color="#92400e"),
+    annotation_bgcolor="rgba(254, 243, 199, 0.95)",
+    annotation_bordercolor="#d97706",
+    annotation_borderpad=5,
 )
 
 # Current threshold marker
@@ -243,24 +249,48 @@ fig.add_trace(
         x=[active_threshold],
         y=[current_metrics["dollars_saved"]],
         mode="markers",
-        name="Active Threshold",
-        marker=dict(color="#e11d48", size=9, symbol="circle"),
+        name=f"Active ({active_threshold:.3f})",
+        marker=dict(
+            color="#e11d48",
+            size=12,
+            symbol="circle",
+            line=dict(width=2, color="#ffffff"),
+        ),
         hovertemplate=f"Active Threshold: {active_threshold:.4f}<br>Savings: ${current_metrics['dollars_saved']:,.2f}<extra></extra>",
     )
 )
 
 fig.update_layout(
-    height=380,
-    margin=dict(l=40, r=40, t=25, b=40),
+    height=420,
+    margin=dict(l=60, r=40, t=35, b=55),
     xaxis=dict(
-        title="Decision Threshold (Classification Cutoff)",
-        gridcolor="#f1f5f9",
-        range=[0.0, 1.0],
+        title=dict(
+            text="Decision Threshold (Classification Cutoff)",
+            font=dict(size=13, weight=600),
+        ),
+        tickfont=dict(size=12, weight=600),
+        dtick=0.10,
+        range=[-0.02, 1.02],
+        showgrid=True,
+        gridcolor="rgba(148, 163, 184, 0.25)",
+        zeroline=True,
+        zerolinecolor="rgba(148, 163, 184, 0.4)",
+        showline=True,
+        linecolor="rgba(148, 163, 184, 0.4)",
     ),
     yaxis=dict(
-        title="Net Dollars Saved ($)",
-        gridcolor="#f1f5f9",
+        title=dict(
+            text="Net Dollars Saved ($)",
+            font=dict(size=13, weight=600),
+        ),
+        tickfont=dict(size=12, weight=600),
         tickprefix="$",
+        showgrid=True,
+        gridcolor="rgba(148, 163, 184, 0.25)",
+        zeroline=True,
+        zerolinecolor="rgba(148, 163, 184, 0.4)",
+        showline=True,
+        linecolor="rgba(148, 163, 184, 0.4)",
     ),
     legend=dict(
         orientation="h",
@@ -268,12 +298,16 @@ fig.update_layout(
         y=1.02,
         xanchor="right",
         x=1,
+        font=dict(size=12, weight=500),
     ),
-    plot_bgcolor="white",
-    paper_bgcolor="white",
+    plot_bgcolor="rgba(0,0,0,0)",
+    paper_bgcolor="rgba(0,0,0,0)",
+    hoverlabel=dict(
+        font_size=13,
+    ),
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width="stretch")
 
 st.markdown("---")
 
@@ -316,7 +350,7 @@ else:
     with c1:
         st.markdown(f"**Top Flagged Alerts (Showing {len(table_rows)} of {total_flagged:,} Total Flagged)**")
         display_df = flagged_table_df.drop(columns=["_idx"])
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
+        st.dataframe(display_df, width="stretch", hide_index=True)
 
     with c2:
         selected_rank = st.selectbox(
@@ -358,6 +392,10 @@ else:
                 y=driver_df["feature"],
                 orientation="h",
                 marker_color=bar_colors,
+                text=[f"{val:+.2f}" for val in driver_df["shap_attribution"]],
+                textposition="outside",
+                textfont=dict(size=12, weight=600),
+                cliponaxis=False,
                 hovertemplate="Feature: %{y}<br>SHAP Value: %{x:+.3f}<extra></extra>",
             )
         )
@@ -365,22 +403,35 @@ else:
         fig_shap.update_layout(
             title=dict(
                 text=f"Local Feature Attribution (Tx #{selected_row['Tx ID']})",
-                font=dict(size=13),
+                font=dict(size=14, weight=600),
             ),
-            height=280,
-            margin=dict(l=30, r=20, t=35, b=30),
+            height=320,
+            margin=dict(l=40, r=40, t=40, b=40),
             xaxis=dict(
-                title="SHAP Value (Impact on Log-Odds)",
+                title=dict(
+                    text="SHAP Value (Impact on Log-Odds)",
+                    font=dict(size=12, weight=600),
+                ),
+                tickfont=dict(size=12, weight=600),
                 zeroline=True,
                 zerolinecolor="#94a3b8",
-                gridcolor="#f1f5f9",
+                zerolinewidth=1.5,
+                gridcolor="rgba(148, 163, 184, 0.25)",
+                showline=True,
+                linecolor="rgba(148, 163, 184, 0.4)",
             ),
-            yaxis=dict(title=""),
-            plot_bgcolor="white",
-            paper_bgcolor="white",
+            yaxis=dict(
+                title="",
+                tickfont=dict(size=13, weight=600),
+            ),
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            hoverlabel=dict(
+                font_size=13,
+            ),
         )
 
-        st.plotly_chart(fig_shap, use_container_width=True)
+        st.plotly_chart(fig_shap, width="stretch")
         st.caption(
             "Red bars escalate fraud probability (positive SHAP contribution); Blue bars mitigate fraud probability."
         )
@@ -414,7 +465,7 @@ for c_inv in sensitivity_costs:
     })
 
 sensitivity_df = pd.DataFrame(sensitivity_rows)
-st.dataframe(sensitivity_df, use_container_width=True, hide_index=True)
+st.dataframe(sensitivity_df, width="stretch", hide_index=True)
 
 # 8. Operational Methodology Footer
 st.markdown("---")

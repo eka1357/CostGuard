@@ -24,5 +24,7 @@ models/*.bin
 # IDE and OS files
 .vscode/
 .idea/
+.agents/
+.claude/
 .DS_Store
 Thumbs.db
